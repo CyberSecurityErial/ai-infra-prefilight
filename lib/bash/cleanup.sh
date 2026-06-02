@@ -11,6 +11,76 @@ clean_process_pattern_local() {
   } >> "${log_file}" 2>&1
 }
 
+marked_preflight_cleanup_command() {
+  cat <<'CLEAN_MARKED_PREFLIGHT'
+if [ ! -d /proc ]; then
+  exit 0
+fi
+
+for envfile in /proc/[0-9]*/environ; do
+  [ -r "${envfile}" ] || continue
+  pid="${envfile#/proc/}"
+  pid="${pid%/environ}"
+  [ "${pid}" = "$$" ] && continue
+
+  env_text="$(tr '\000' '\n' < "${envfile}" 2>/dev/null || true)"
+  printf '%s\n' "${env_text}" | grep -Fxq 'AI_INFRA_PREFLIGHT=1' || continue
+
+  if [ -n "${PREFLIGHT_CLEAN_RUN_ID:-}" ]; then
+    printf '%s\n' "${env_text}" | grep -Fxq "PREFLIGHT_RUN_ID=${PREFLIGHT_CLEAN_RUN_ID}" || continue
+  fi
+
+  cmdline="$(tr '\000' ' ' < "/proc/${pid}/cmdline" 2>/dev/null || true)"
+  printf '%s %s\n' "${pid}" "${cmdline}"
+  kill -9 "${pid}" 2>/dev/null || true
+done
+CLEAN_MARKED_PREFLIGHT
+}
+
+clean_marked_preflight_local() {
+  local log_file="${RUN_DIR:-/tmp}/cleanup_marked_local.log"
+  local clean_run_id=""
+
+  if [ "${PREFLIGHT_CLEAN_SCOPE:-all_preflight}" = "current_run" ]; then
+    clean_run_id="${PREFLIGHT_RUN_ID:-}"
+  fi
+
+  {
+    printf '[%s] clean marked preflight processes: scope=%s run_id=%s\n' "$(preflight_timestamp)" "${PREFLIGHT_CLEAN_SCOPE:-all_preflight}" "${clean_run_id}"
+    PREFLIGHT_CLEAN_RUN_ID="${clean_run_id}" bash -lc "$(marked_preflight_cleanup_command)"
+  } >> "${log_file}" 2>&1
+}
+
+clean_marked_preflight_all_nodes() {
+  local host
+  local script
+  local script_q
+  local clean_run_id=""
+  local run_id_q
+
+  if [ "${PREFLIGHT_CLEAN_SCOPE:-all_preflight}" = "current_run" ]; then
+    clean_run_id="${PREFLIGHT_RUN_ID:-}"
+  fi
+
+  script="$(marked_preflight_cleanup_command)"
+  printf -v script_q '%q' "${script}"
+  printf -v run_id_q '%q' "${clean_run_id}"
+
+  if [ "$(_cleanup_node_count)" -eq 0 ]; then
+    clean_marked_preflight_local
+    return 0
+  fi
+
+  for host in "${NODE_HOSTS[@]}"; do
+    local log_file="${RUN_DIR:-/tmp}/cleanup_marked_${host}.log"
+    if declare -F is_local_host >/dev/null 2>&1 && is_local_host "${host}"; then
+      clean_marked_preflight_local
+    elif declare -F remote_exec_timeout >/dev/null 2>&1; then
+      remote_exec_timeout "${COMMAND_TIMEOUT:-10}" "${host}" "PREFLIGHT_CLEAN_RUN_ID=${run_id_q} bash -lc ${script_q}" "${log_file}" || true
+    fi
+  done
+}
+
 _cleanup_node_count() {
   if declare -p NODE_HOSTS >/dev/null 2>&1; then
     printf '%s\n' "${#NODE_HOSTS[@]}"
@@ -91,16 +161,25 @@ mpi_cleanup_pattern() {
 }
 
 clean_mpi() {
-  clean_process_pattern_all_nodes "$(mpi_cleanup_pattern)"
+  clean_marked_preflight_all_nodes
+  if [ "${PREFLIGHT_CLEAN_LEGACY_PATTERNS:-0}" = "1" ]; then
+    clean_process_pattern_all_nodes "$(mpi_cleanup_pattern)"
+  fi
   clean_mpi_tmp_all_nodes
 }
 
 clean_nccl() {
-  clean_process_pattern_all_nodes "[a]ll_reduce_perf"
+  clean_marked_preflight_all_nodes
+  if [ "${PREFLIGHT_CLEAN_LEGACY_PATTERNS:-0}" = "1" ]; then
+    clean_process_pattern_all_nodes "[a]ll_reduce_perf"
+  fi
 }
 
 clean_ray_temp() {
-  clean_process_pattern_all_nodes "[r]ay::Preflight|[p]reflight_ray_temp"
+  clean_marked_preflight_all_nodes
+  if [ "${PREFLIGHT_CLEAN_LEGACY_PATTERNS:-0}" = "1" ]; then
+    clean_process_pattern_all_nodes "[r]ay::Preflight|[p]reflight_ray_temp"
+  fi
 }
 
 clean_all() {

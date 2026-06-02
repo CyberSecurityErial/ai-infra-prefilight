@@ -12,7 +12,39 @@ exit code. Exit code `124` means timeout.
 
 ## Process Cleanup
 
-The current MPI and NCCL cleanup targets are:
+Every command launched through `run_cmd` receives marker environment variables:
+
+```text
+AI_INFRA_PREFLIGHT=1
+PREFLIGHT_RUN_ID=<run directory timestamp>
+```
+
+MPI-based checks also export those markers through `mpirun -x` so remote ranks
+can be identified. Cleanup normally removes only marked preflight processes.
+
+Cleanup scope is controlled by:
+
+```bash
+PREFLIGHT_CLEAN_SCOPE=all_preflight
+```
+
+Supported values:
+
+```text
+all_preflight  clean any AI_INFRA_PREFLIGHT=1 process left by this tool
+current_run    clean only processes with this run's PREFLIGHT_RUN_ID
+```
+
+Legacy name-based cleanup is disabled by default. Enable it only for incident
+recovery or for cleaning processes left by older preflight versions that did not
+carry markers:
+
+```bash
+PREFLIGHT_CLEAN_LEGACY_PATTERNS=1
+```
+
+When legacy cleanup is explicitly enabled, the MPI and NCCL name-based cleanup
+targets are:
 
 ```text
 mpirun

@@ -79,7 +79,8 @@ run_cmd() {
     printf '\n'
   } >> "${log_file}"
 
-  preflight_with_timeout "${timeout_sec}" "$@" >> "${log_file}" 2>&1
+  AI_INFRA_PREFLIGHT=1 PREFLIGHT_RUN_ID="${PREFLIGHT_RUN_ID:-unknown}" \
+    preflight_with_timeout "${timeout_sec}" "$@" >> "${log_file}" 2>&1
   local rc=$?
 
   {

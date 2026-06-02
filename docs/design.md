@@ -18,11 +18,12 @@ Keep these rules intact:
 5. MPI standalone checks belong in capabilities/mpi.sh.
 6. Launcher-specific NCCL tests belong in integrations/<path>.sh.
 7. Every possibly hanging command must use run_cmd or preflight_with_timeout.
-8. Distributed checks must clean residual processes before and after the check.
+8. Distributed checks must clean their own residual processes before and after the check.
 9. Every check must append one result row to summary.tsv.
 10. Node count must come from NODES_FILE, not from script names or hard-coded paths.
 11. Integration-only tests should not run when a required capability already failed.
-12. Cleanup patterns must be narrow and must not kill shared cluster services by default.
+12. Cleanup must target processes launched by preflight markers by default.
+13. Commands launched by preflight should carry AI_INFRA_PREFLIGHT/PREFLIGHT_RUN_ID markers when possible.
 ```
 
 The most important example:
@@ -232,8 +233,9 @@ Avoid these changes:
 7. Hard-coding two nodes in code.
 8. Requiring YAML, JSON, jq, Python, or other optional tools for core Bash flow.
 9. Killing user-owned long-running services such as Ray head/worker by default.
-10. Killing broad shared runtime processes such as all `pmix` processes by default.
-11. Treating debug-only verbose output as a required pass condition.
+10. Killing unmarked `mpirun`, `orted`, `prted`, `all_reduce_perf`, or `pmix` processes by default.
+11. Launching distributed commands without preflight process markers when the launcher supports env propagation.
+12. Treating debug-only verbose output as a required pass condition.
 ```
 
 ## Compatibility Bias

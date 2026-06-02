@@ -73,6 +73,7 @@ nccl_mpi_integration_check() {
   fi
 
   mpi_build_run_args
+  mpi_preflight_env_args_array
 
   local log_file="${RUN_DIR}/nccl_mpi_allreduce.log"
   local env_args
@@ -86,6 +87,7 @@ nccl_mpi_integration_check() {
 
   run_cmd "nccl_mpi_allreduce" "${NCCL_TIMEOUT}" "${log_file}" -- \
     "${MPI_RUN_ARGS[@]}" \
+    "${MPI_PREFLIGHT_ENV_ARGS[@]}" \
     "${env_args[@]}" \
     "${NCCL_TEST_BIN}" \
     -b "${NCCL_MIN_BYTES}" \

@@ -25,6 +25,7 @@ MPI_COMMON_ARGS=()
 MPI_NETWORK_ARGS=()
 MPI_VERBOSE_ARGS=()
 MPI_RUN_ARGS=()
+MPI_PREFLIGHT_ENV_ARGS=()
 
 mpi_defaults() {
   default_var COMMAND_TIMEOUT "20"
@@ -103,6 +104,12 @@ mpi_build_run_args() {
   mpi_verbose_args_array
   mpi_network_args_array
   MPI_RUN_ARGS=("${MPI_BIN}" "${MPI_COMMON_ARGS[@]}" "${MPI_VERBOSE_ARGS[@]}" "${MPI_NETWORK_ARGS[@]}")
+}
+
+mpi_preflight_env_args_array() {
+  MPI_PREFLIGHT_ENV_ARGS=()
+  MPI_PREFLIGHT_ENV_ARGS+=(-x AI_INFRA_PREFLIGHT=1)
+  MPI_PREFLIGHT_ENV_ARGS+=(-x "PREFLIGHT_RUN_ID=${PREFLIGHT_RUN_ID:-unknown}")
 }
 
 mpi_common_args() {
@@ -222,7 +229,9 @@ mpi_check_local_hostname() {
   fi
 
   clean_mpi
-  run_cmd "mpi_local_hostname" "${MPI_TIMEOUT}" "${log_file}" -- "${args[@]}" hostname
+  run_cmd "mpi_local_hostname" "${MPI_TIMEOUT}" "${log_file}" -- \
+    env AI_INFRA_PREFLIGHT=1 "PREFLIGHT_RUN_ID=${PREFLIGHT_RUN_ID:-unknown}" \
+    "${args[@]}" hostname
   local rc=$?
   mpi_extract_important_lines "${log_file}" > "${RUN_DIR}/mpi_local_hostname.important.log" || true
   clean_mpi
@@ -249,9 +258,11 @@ mpi_check_multinode_hostname() {
   fi
 
   mpi_build_run_args
+  mpi_preflight_env_args_array
 
   clean_mpi
-  run_cmd "mpi_multinode_hostname" "${MPI_TIMEOUT}" "${log_file}" -- "${MPI_RUN_ARGS[@]}" hostname
+  run_cmd "mpi_multinode_hostname" "${MPI_TIMEOUT}" "${log_file}" -- \
+    "${MPI_RUN_ARGS[@]}" "${MPI_PREFLIGHT_ENV_ARGS[@]}" hostname
   local rc=$?
   mpi_extract_important_lines "${log_file}" > "${RUN_DIR}/mpi_multinode_hostname.important.log" || true
   clean_mpi

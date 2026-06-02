@@ -59,6 +59,8 @@ load_config() {
   default_var SSH_PORT "22"
   default_var UPDATE_ETC_HOSTS "0"
   default_var PREFLIGHT_DEBUG "0"
+  default_var PREFLIGHT_CLEAN_LEGACY_PATTERNS "0"
+  default_var PREFLIGHT_CLEAN_SCOPE "all_preflight"
 
   log_info "loaded config: ${env_file}"
 }
@@ -102,7 +104,9 @@ init_run_dir() {
   fi
 
   mkdir -p "${RUN_DIR}"
+  PREFLIGHT_RUN_ID="${PREFLIGHT_RUN_ID:-$(basename "${RUN_DIR}")}"
   export RUN_DIR
+  export PREFLIGHT_RUN_ID
   log_info "run_dir: ${RUN_DIR}"
 }
 

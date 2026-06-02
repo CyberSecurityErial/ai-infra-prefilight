@@ -238,10 +238,27 @@ docs/troubleshooting/nccl_mpi_hang.md
 
 ## Safe Cleanup / 安全清理
 
-分布式检查会在运行前后清理 preflight 相关的 MPI 和 NCCL 进程：
+分布式检查会在运行前后清理带有 preflight 标记的进程。脚本启动的命令会带上：
 
-Distributed checks clean preflight-related MPI and NCCL processes before and
-after running:
+Distributed checks clean processes marked by preflight. Commands launched by the
+script carry:
+
+```text
+AI_INFRA_PREFLIGHT=1
+PREFLIGHT_RUN_ID=<run_id>
+```
+
+默认不会按通用进程名杀 `mpirun`、`orted`、`prted`、`all_reduce_perf` 或 `pmix`。只有事故恢复时显式开启：
+
+By default, cleanup does not kill generic `mpirun`, `orted`, `prted`,
+`all_reduce_perf`, or `pmix` processes by name. Enable this only for incident
+recovery:
+
+```bash
+PREFLIGHT_CLEAN_LEGACY_PATTERNS=1
+```
+
+legacy name-based cleanup targets:
 
 ```text
 mpirun
