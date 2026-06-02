@@ -38,6 +38,48 @@ clean_process_pattern_all_nodes() {
   done
 }
 
+mpi_tmp_cleanup_command() {
+  cat <<'CLEAN_MPI_TMP'
+rm -rf /tmp/openmpi-sessions-* /tmp/ompi.* /tmp/pmix-* 2>/dev/null || true
+CLEAN_MPI_TMP
+}
+
+clean_mpi_tmp_local() {
+  local log_file="${RUN_DIR:-/tmp}/cleanup_mpi_tmp_local.log"
+
+  if [ "${PREFLIGHT_CLEAN_MPI_TMP:-0}" != "1" ]; then
+    return 0
+  fi
+
+  {
+    printf '[%s] clean local MPI temp dirs\n' "$(preflight_timestamp)"
+    find /tmp -maxdepth 1 \( -name 'openmpi-sessions-*' -o -name 'ompi.*' -o -name 'pmix-*' \) -print 2>/dev/null || true
+    bash -lc "$(mpi_tmp_cleanup_command)"
+  } >> "${log_file}" 2>&1
+}
+
+clean_mpi_tmp_all_nodes() {
+  local host
+
+  if [ "${PREFLIGHT_CLEAN_MPI_TMP:-0}" != "1" ]; then
+    return 0
+  fi
+
+  if [ "$(_cleanup_node_count)" -eq 0 ]; then
+    clean_mpi_tmp_local
+    return 0
+  fi
+
+  for host in "${NODE_HOSTS[@]}"; do
+    local log_file="${RUN_DIR:-/tmp}/cleanup_mpi_tmp_${host}.log"
+    if declare -F is_local_host >/dev/null 2>&1 && is_local_host "${host}"; then
+      clean_mpi_tmp_local
+    elif declare -F remote_exec_timeout >/dev/null 2>&1; then
+      remote_exec_timeout "${COMMAND_TIMEOUT:-10}" "${host}" "$(mpi_tmp_cleanup_command)" "${log_file}" || true
+    fi
+  done
+}
+
 mpi_cleanup_pattern() {
   local pattern="[m]pirun|[o]rted|[p]rted"
 
@@ -50,6 +92,7 @@ mpi_cleanup_pattern() {
 
 clean_mpi() {
   clean_process_pattern_all_nodes "$(mpi_cleanup_pattern)"
+  clean_mpi_tmp_all_nodes
 }
 
 clean_nccl() {

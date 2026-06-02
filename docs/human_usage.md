@@ -255,6 +255,16 @@ all_reduce_perf
 
 The first version does not kill a user's normal Ray head or worker by default.
 
+默认 cleanup 不删除 `/tmp` 下的 OpenMPI/PMIx 临时目录。排障恢复时，如果确认当前用户没有其他 MPI 作业，可以在配置里设置：
+
+By default, cleanup does not delete OpenMPI/PMIx temp directories under `/tmp`.
+During incident recovery, after confirming there are no other MPI jobs for the
+current user, set:
+
+```bash
+PREFLIGHT_CLEAN_MPI_TMP=1
+```
+
 ## Common Runs / 常用命令
 
 使用 smoke 配置：

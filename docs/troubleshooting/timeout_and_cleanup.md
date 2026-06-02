@@ -29,6 +29,22 @@ residuals, enable it explicitly:
 PREFLIGHT_CLEAN_PMIX=1
 ```
 
+OpenMPI and PMIx temp directories are also not removed by default. During
+incident recovery, after confirming no unrelated MPI jobs are running for the
+same user, enable:
+
+```bash
+PREFLIGHT_CLEAN_MPI_TMP=1
+```
+
+This removes:
+
+```text
+/tmp/openmpi-sessions-*
+/tmp/ompi.*
+/tmp/pmix-*
+```
+
 Cleanup functions:
 
 ```text
