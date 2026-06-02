@@ -22,6 +22,7 @@ Keep these rules intact:
 9. Every check must append one result row to summary.tsv.
 10. Node count must come from NODES_FILE, not from script names or hard-coded paths.
 11. Integration-only tests should not run when a required capability already failed.
+12. Cleanup patterns must be narrow and must not kill shared cluster services by default.
 ```
 
 The most important example:
@@ -231,7 +232,8 @@ Avoid these changes:
 7. Hard-coding two nodes in code.
 8. Requiring YAML, JSON, jq, Python, or other optional tools for core Bash flow.
 9. Killing user-owned long-running services such as Ray head/worker by default.
-10. Treating debug-only verbose output as a required pass condition.
+10. Killing broad shared runtime processes such as all `pmix` processes by default.
+11. Treating debug-only verbose output as a required pass condition.
 ```
 
 ## Compatibility Bias

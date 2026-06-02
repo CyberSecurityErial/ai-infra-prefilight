@@ -38,8 +38,18 @@ clean_process_pattern_all_nodes() {
   done
 }
 
+mpi_cleanup_pattern() {
+  local pattern="[m]pirun|[o]rted|[p]rted"
+
+  if [ "${PREFLIGHT_CLEAN_PMIX:-0}" = "1" ]; then
+    pattern="${pattern}|[p]mix|p[m]ix"
+  fi
+
+  printf '%s\n' "${pattern}"
+}
+
 clean_mpi() {
-  clean_process_pattern_all_nodes "[m]pirun|[o]rted|[p]rted|p[m]ix"
+  clean_process_pattern_all_nodes "$(mpi_cleanup_pattern)"
 }
 
 clean_nccl() {
@@ -58,7 +68,7 @@ clean_all() {
 }
 
 show_residual_all_nodes() {
-  local pattern="${1:-[m]pirun|[o]rted|[p]rted|p[m]ix|[a]ll_reduce_perf}"
+  local pattern="${1:-$(mpi_cleanup_pattern)|[a]ll_reduce_perf}"
   local host
 
   if [ "$(_cleanup_node_count)" -eq 0 ]; then

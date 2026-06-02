@@ -18,8 +18,15 @@ The current MPI and NCCL cleanup targets are:
 mpirun
 orted
 prted
-pmix
 all_reduce_perf
+```
+
+`pmix` is not cleaned by default because that pattern can be too broad on some
+systems. If a specific environment needs PMIx cleanup for preflight-only
+residuals, enable it explicitly:
+
+```bash
+PREFLIGHT_CLEAN_PMIX=1
 ```
 
 Cleanup functions:
