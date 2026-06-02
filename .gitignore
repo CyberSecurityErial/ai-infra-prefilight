@@ -1,0 +1,5 @@
+logs/**
+!logs/.gitkeep
+
+*.tmp
+.DS_Store

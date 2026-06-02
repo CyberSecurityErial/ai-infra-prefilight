@@ -1,0 +1,104 @@
+#!/usr/bin/env bash
+set -u
+set -o pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+usage() {
+  cat <<'USAGE'
+Usage:
+  bin/preflight <target> <config>
+
+Targets:
+  capability:nccl        nccl
+  capability:mpi         mpi
+  capability:ssh         ssh
+  capability:network     network
+  capability:ray         ray
+  capability:torchrun    torchrun
+  capability:slurm       slurm
+
+  integration:nccl_mpi       nccl_mpi
+  integration:nccl_ray       nccl_ray
+  integration:nccl_torchrun  nccl_torchrun
+  integration:nccl_srun      nccl_srun
+USAGE
+}
+
+resolve_arg_path() {
+  local path="$1"
+
+  if [ "${path#/}" != "${path}" ]; then
+    printf '%s\n' "${path}"
+    return 0
+  fi
+
+  if [ -f "${path}" ]; then
+    (cd "$(dirname "${path}")" && printf '%s/%s\n' "$(pwd)" "$(basename "${path}")")
+    return 0
+  fi
+
+  if [ -f "${ROOT_DIR}/${path}" ]; then
+    (cd "$(dirname "${ROOT_DIR}/${path}")" && printf '%s/%s\n' "$(pwd)" "$(basename "${ROOT_DIR}/${path}")")
+    return 0
+  fi
+
+  printf '%s\n' "${path}"
+}
+
+target="${1:-}"
+config="${2:-}"
+
+if [ -z "${target}" ] || [ -z "${config}" ]; then
+  usage
+  exit 2
+fi
+
+kind=""
+name=""
+
+case "${target}" in
+  capability:*)
+    kind="capability"
+    name="${target#capability:}"
+    ;;
+  integration:*)
+    kind="integration"
+    name="${target#integration:}"
+    ;;
+  nccl|mpi|ssh|network|ray|torchrun|slurm)
+    kind="capability"
+    name="${target}"
+    ;;
+  nccl_mpi|nccl_ray|nccl_torchrun|nccl_srun)
+    kind="integration"
+    name="${target}"
+    ;;
+  *)
+    printf 'unknown target: %s\n\n' "${target}" >&2
+    usage
+    exit 2
+    ;;
+esac
+
+config="$(resolve_arg_path "${config}")"
+
+case "${kind}" in
+  capability)
+    script="${ROOT_DIR}/capabilities/${name}.sh"
+    ;;
+  integration)
+    script="${ROOT_DIR}/integrations/${name}.sh"
+    ;;
+  *)
+    printf 'internal error: invalid target kind\n' >&2
+    exit 2
+    ;;
+esac
+
+if [ ! -f "${script}" ]; then
+  printf 'target script not found: %s\n' "${script}" >&2
+  exit 2
+fi
+
+exec bash "${script}" "${config}"
