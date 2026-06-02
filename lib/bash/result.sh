@@ -55,3 +55,35 @@ result_skip() {
 result_warn() {
   _result_record "$1" "WARN" "${2:-}"
 }
+
+result_has_fail() {
+  if [ -z "${SUMMARY_FILE:-}" ] || [ ! -f "${SUMMARY_FILE}" ]; then
+    return 1
+  fi
+
+  awk -F '\t' '$2 == "FAIL" { found = 1 } END { exit found ? 0 : 1 }' "${SUMMARY_FILE}"
+}
+
+result_has_fail_by_prefix() {
+  local prefix="$1"
+
+  if [ -z "${SUMMARY_FILE:-}" ] || [ ! -f "${SUMMARY_FILE}" ]; then
+    return 1
+  fi
+
+  awk -F '\t' -v prefix="${prefix}" \
+    '$2 == "FAIL" && index($1, prefix) == 1 { found = 1 } END { exit found ? 0 : 1 }' \
+    "${SUMMARY_FILE}"
+}
+
+result_failed_checks_by_prefix() {
+  local prefix="$1"
+
+  if [ -z "${SUMMARY_FILE:-}" ] || [ ! -f "${SUMMARY_FILE}" ]; then
+    return 0
+  fi
+
+  awk -F '\t' -v prefix="${prefix}" \
+    '$2 == "FAIL" && index($1, prefix) == 1 { print $1 }' \
+    "${SUMMARY_FILE}"
+}

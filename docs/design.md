@@ -21,6 +21,7 @@ Keep these rules intact:
 8. Distributed checks must clean residual processes before and after the check.
 9. Every check must append one result row to summary.tsv.
 10. Node count must come from NODES_FILE, not from script names or hard-coded paths.
+11. Integration-only tests should not run when a required capability already failed.
 ```
 
 The most important example:
@@ -132,6 +133,12 @@ An integration module may:
 An integration module must not duplicate reusable checks from capability modules.
 If a check would be useful for another launcher or integration path, move it into
 the relevant capability module.
+
+Integration modules should gate expensive or hang-prone cross-component tests on
+their required capability checks. For example, `nccl_mpi.sh` records
+`nccl_mpi_allreduce` as `SKIP` when any previous `mpi_*` check has already
+failed. That keeps the first failure as the useful diagnostic signal and avoids
+running the same broken launcher path twice.
 
 ## Execution Model
 

@@ -151,6 +151,13 @@ nccl_mpi:
   Runs SSH/network checks, NCCL checks, MPI checks, then mpirun-launched NCCL.
 ```
 
+如果前面的 `mpi_*` 检查已经出现 `FAIL`，`nccl_mpi` 不会继续运行 NCCL over MPI 联调，而是把 `nccl_mpi_allreduce` 记录为 `SKIP`。这样可以保留第一次 MPI 失败作为主要诊断信息，避免同一个 MPI hang 再 timeout 一次。
+
+If an earlier `mpi_*` check already recorded `FAIL`, `nccl_mpi` will not run the
+NCCL over MPI integration test. It records `nccl_mpi_allreduce` as `SKIP` so the
+first MPI failure remains the main diagnostic signal and the same MPI hang is
+not timed out twice.
+
 ## Logs and Summary / 日志和 Summary
 
 每次运行都会创建：

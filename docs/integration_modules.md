@@ -31,6 +31,15 @@ The NCCL over MPI test uses:
 mpirun <mpi args> -x NCCL_DEBUG=... -x NCCL_SOCKET_IFNAME=... all_reduce_perf ...
 ```
 
+If any previous `mpi_*` check records `FAIL`, the integration allreduce is not
+run. The script records:
+
+```text
+nccl_mpi_allreduce  SKIP  skipped because MPI prerequisite failed: ...
+```
+
+This avoids timing out the same broken MPI launcher path twice.
+
 ## Future Integrations
 
 `nccl_ray.sh`, `nccl_torchrun.sh`, and `nccl_srun.sh` are stubs in the first

@@ -42,6 +42,19 @@ nccl_mpi_defaults() {
   default_var RUN_INTEGRATION_CHECK "1"
 }
 
+nccl_mpi_skip_if_mpi_prerequisite_failed() {
+  local failed_checks
+
+  if ! result_has_fail_by_prefix "mpi_"; then
+    return 1
+  fi
+
+  section "NCCL over MPI integration check"
+  failed_checks="$(result_failed_checks_by_prefix "mpi_" | tr '\n' ',' | sed 's/,$//')"
+  result_skip "nccl_mpi_allreduce" "skipped because MPI prerequisite failed: ${failed_checks}"
+  return 0
+}
+
 nccl_mpi_integration_check() {
   section "NCCL over MPI integration check"
 
@@ -152,7 +165,9 @@ integration_nccl_mpi_main() {
   fi
 
   if [ "${RUN_INTEGRATION_CHECK:-1}" = "1" ]; then
-    nccl_mpi_integration_check
+    if ! nccl_mpi_skip_if_mpi_prerequisite_failed; then
+      nccl_mpi_integration_check
+    fi
   else
     result_skip "nccl_mpi_allreduce" "RUN_INTEGRATION_CHECK is disabled"
   fi
